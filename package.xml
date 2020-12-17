@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>Camera simulator - run a recorded video file streamed on a ros topic as if a live webcamera.</description>
 
-  <maintainer>Andreas Klintberg</maintainer>
+  <maintainer email="user@todo.todo">Andreas Klintberg</maintainer>
   <license>Apache License 2.0</license>
 
   <depend>rclpy</depend>
