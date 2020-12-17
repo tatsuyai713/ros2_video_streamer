@@ -36,16 +36,19 @@ class CameraSimulator(Node):
     def __init__(self, **kwargs):
         super().__init__("camera_simulator")
 
-        image_topic_ = self.declare_parameter("image_topic", "/image/image_raw").value
-        camera_info_topic_ = self.declare_parameter("camera_info_topic", "/image/camera_info").value
+        #image_topic_ = self.declare_parameter("image_topic", "/image/image_raw").value
+        #camera_info_topic_ = self.declare_parameter("camera_info_topic", "/image/camera_info").value
+
+        self.image_topic = kwargs["image_topic"]
+        self.camera_info_topic = kwargs["camera_info_topic"]
 
         self.frame_id_ = self.declare_parameter("frame_id", "camera").value
         self.camera_name_ = self.declare_parameter("camera_name", "narrow_stereo").value
 
         self.calibration_file = kwargs["calibration_file"]
 
-        self.image_publisher_ = self.create_publisher(Image, image_topic_, 5)
-        self.camera_info_publisher_ = self.create_publisher(CameraInfo, camera_info_topic_, 5)
+        self.image_publisher_ = self.create_publisher(Image, self.image_topic, 5)
+        self.camera_info_publisher_ = self.create_publisher(CameraInfo, self.camera_info_topic, 5)
 
         self.br = CvBridge()
 
@@ -53,7 +56,7 @@ class CameraSimulator(Node):
 
         try:
             f = open(self.calibration_file)
-            calib = yaml.load(f, Loader=yaml.FullLoader)
+            calib = yaml.load(f, Loader=yaml.Loader)
         except IOError:
             calib = None
             self.get_logger().warning(
@@ -166,13 +169,15 @@ def main(args=None):
     parser.add_argument("--calibration_file", type=str, default="", help="path to video folder")
     parser.add_argument("--type", type=str, default="video", help='type of "image" or "video')
     parser.add_argument("--start", type=int, default=0, help="starting position")
+    parser.add_argument("--image_topic", type=str, default="image", help="name of the image topic to be published")
+    parser.add_argument("--camera_info_topic", type=str, default="camera_info", help="name of the camera info topic to be published")
 
     extra_args = parser.parse_args()
 
     rclpy.init(args=args)
 
     camera_simulator = CameraSimulator(
-        path=extra_args.path, type=extra_args.type, calibration_file=extra_args.calibration_file, start=extra_args.start
+        path=extra_args.path, type=extra_args.type, calibration_file=extra_args.calibration_file, start=extra_args.start, image_topic=extra_args.image_topic, camera_info_topic=extra_args.camera_info_topic
     )
 
     rclpy.spin(camera_simulator)
