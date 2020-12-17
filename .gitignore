@@ -7,6 +7,6 @@ dist/
 include/
 install/
 log/
-src/__pycache__/
+camera_simulator/__pycache__/
 src/camera_simulator.egg-info/
 lib/
