@@ -1,10 +1,10 @@
 camera_simulator:
     ros__parameters:
-        path: "/home/andreas/openpose/examples/media/Sturzvideos/Sturz10_hoch_wave.mp4"
-        calibration_file: "/home/andreas/petra_ws/src/ros2_video_streamer/config/camera.yaml"
+        path: "/home/andreas/Code/petra_ws/evaluation_dataset/fall_9.mp4"
+        calibration_file: "/home/andreas/Code/test_ws/src/ros2_video_streamer/config/camera.yaml"
         type: "video"
         start: 0
         frame_id: "camera"
         camera_name: "narrow_stereo"
         image_topic: "/image"
-        camera_info_topic: "camera_info"
+        camera_info_topic: "/camera_info"

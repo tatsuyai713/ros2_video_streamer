@@ -1,6 +1,17 @@
 import os
+from ament_index_python.packages import get_package_prefix
 import launch
 import launch_ros.actions
+
+config = os.path.join(
+    get_package_prefix('camera_simulator'),
+    '..',
+    '..',
+    'src',
+    'ros2_video_streamer',
+    'config',
+    'config.yaml'
+)
 
 
 def generate_launch_description():
@@ -9,7 +20,8 @@ def generate_launch_description():
             package="camera_simulator",
             node_executable="camera_simulator",
             output="screen",
-            parameters=[os.path.join(os.path.dirname(__file__), "..", "config", "config.yaml")]
+            prefix=['stdbuf -o L'],
+            parameters=[config]
         )
     ])
     return ld
