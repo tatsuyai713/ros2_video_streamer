@@ -1,8 +1,8 @@
 camera_simulator:
     ros__parameters:
-        path: "/home/andreas/Code/petra_ws/evaluation_dataset/fall_9.mp4"
+        path: "/home/andreas/Code/petra_ws/probot_single_images/K4.13_realsense"
         calibration_file: "/home/andreas/Code/test_ws/src/ros2_video_streamer/config/camera.yaml"
-        type: "video"
+        type: "image"
         start: 0
         frame_id: "camera"
         camera_name: "narrow_stereo"

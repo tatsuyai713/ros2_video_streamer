@@ -23,6 +23,7 @@ import cv2
 import os
 import yaml
 from natsort import natsorted
+import time
 
 
 class CameraSimulator(Node):
@@ -97,6 +98,7 @@ class CameraSimulator(Node):
             for image_path in natsorted(os.listdir(self.path_), key=lambda y: y.lower()):
                 if image_path.endswith(".jpg") or image_path.endswith(".jpeg") or image_path.endswith(".png"):
                     self.image_callback(os.path.join(self.path_, image_path))
+                    # time.sleep(0.1)  # for slower playback speed
             self.get_logger().info("All images have been published")
 
     def image_callback(self, image_path=None):
@@ -108,7 +110,7 @@ class CameraSimulator(Node):
             self.get_logger().error("Image path is none.")
             raise ValueError()
 
-        time_msg = self.get_time_msg()
+        time_msg = self.get_time_msg(image_path)
         img_msg = self.get_image_msg(image, time_msg)  # Convert the image to a message
 
         if self.calib:
@@ -138,12 +140,21 @@ class CameraSimulator(Node):
         ci.header.frame_id = self.frame_id_
         return ci
 
-    def get_time_msg(self):
+    def get_time_msg(self, image_path):
         time_msg = Time()
         msg_time = self.get_clock().now().seconds_nanoseconds()
 
         time_msg.sec = int(msg_time[0])
         time_msg.nanosec = int(msg_time[1])
+
+        # use timestamp from image title
+        # path = os.path.normpath(image_path)
+        # folders = path.split(os.sep)
+        # title = folders[-1]
+        # title_stamp = title.split('-')[0].split('.')
+        # time_msg.sec = int(title_stamp[0])
+        # time_msg.nanosec = int(title_stamp[1])
+
         return time_msg
 
     def get_image_msg(self, image, time):
