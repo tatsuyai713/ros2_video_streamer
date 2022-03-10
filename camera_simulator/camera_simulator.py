@@ -59,6 +59,8 @@ class CameraSimulator(Node):
         self.image_publisher_ = self.create_publisher(Image, image_topic_, 5)
         self.camera_info_publisher_ = self.create_publisher(CameraInfo, camera_info_topic_, 5)
 
+        self.frame_counter_ = 0
+
         self.br = CvBridge()
 
         try:
@@ -98,7 +100,7 @@ class CameraSimulator(Node):
             for image_path in natsorted(os.listdir(self.path_), key=lambda y: y.lower()):
                 if image_path.endswith(".jpg") or image_path.endswith(".jpeg") or image_path.endswith(".png"):
                     self.image_callback(os.path.join(self.path_, image_path))
-                    # time.sleep(0.1)  # for slower playback speed
+                    time.sleep(0.02)  # for slower playback speed
             self.get_logger().info("All images have been published")
 
     def image_callback(self, image_path=None):
@@ -166,6 +168,8 @@ class CameraSimulator(Node):
         img_msg = CvBridge().cv2_to_imgmsg(image, encoding="bgr8")
         img_msg.header.stamp = time
         img_msg.header.frame_id = self.frame_id_
+        # self.frame_counter_ += 1
+        # img_msg.header.frame_id = str(self.frame_counter_)
         return img_msg
 
     def get_compressed_msg(self, image):
@@ -185,7 +189,10 @@ def main(args=None):
 
     camera_simulator = CameraSimulator()
 
-    rclpy.spin(camera_simulator)
+    try:
+        rclpy.spin(camera_simulator)
+    except KeyboardInterrupt:
+        camera_simulator.get_logger().info("KeyboardInterrupt")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
