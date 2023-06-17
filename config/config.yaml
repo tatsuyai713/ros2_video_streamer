@@ -1,10 +1,12 @@
 camera_simulator:
     ros__parameters:
-        path: "/home/andreas/Code/petra_ws/probot_single_images/K4.13_realsense"
-        calibration_file: "/home/andreas/Code/test_ws/src/ros2_video_streamer/config/camera.yaml"
-        type: "image"
+        path: "/media/psf/Home/Downloads/japan_camera.mp4"
+        calibration_file: "/home/tatsuyai/ros2_ws/src/ros2_video_streamer/config/camera.yaml"
+        type: "video"
+        loop: "true"
         start: 0
         frame_id: "camera"
         camera_name: "narrow_stereo"
-        image_topic: "/image"
-        camera_info_topic: "/camera_info"
+        image_topic: "/color/image_raw"
+        compressed_image_topic: "/color/image_raw/compressed"
+        camera_info_topic: "/color/camera_info"

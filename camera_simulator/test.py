@@ -17,13 +17,12 @@ import argparse
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from builtin_interfaces.msg import Time
+import cv2
 from cv_bridge import CvBridge
 from datetime import datetime
-import cv2
 import os
 import yaml
 from natsort import natsorted
-import time
 import numpy as np
 
 
@@ -38,44 +37,32 @@ class CameraSimulator(Node):
     def __init__(self, **kwargs):
         super().__init__("camera_simulator")
 
-        self.declare_parameter("path")
-        self.declare_parameter("calibration_file")
-        self.declare_parameter("type")
-        self.declare_parameter("start")
-        self.declare_parameter("loop")
-        self.declare_parameter("frame_id")
-        self.declare_parameter("camera_name")
-        self.declare_parameter("image_topic")
-        self.declare_parameter("compressed_image_topic")
-        self.declare_parameter("camera_info_topic")
+        image_topic_ = self.declare_parameter("image_topic", "/color/image_raw").value
+        compressed_image_topic_ = self.declare_parameter("compressed_image_topic", "/color/image_raw/compressed").value
+        camera_info_topic_ = self.declare_parameter("camera_info_topic", "/image/camera_info").value
 
-        image_topic_ = self.get_parameter("image_topic").get_parameter_value().string_value
-        compressed_image_topic_ = self.get_parameter("compressed_image_topic").get_parameter_value().string_value
-        camera_info_topic_ = self.get_parameter("camera_info_topic").get_parameter_value().string_value
+        self.frame_id_ = self.declare_parameter("frame_id", "camera").value
+        self.camera_name_ = self.declare_parameter("camera_name", "narrow_stereo").value
 
-        self.frame_id_ = self.get_parameter("frame_id").get_parameter_value().string_value
-        self.camera_name_ = self.get_parameter("camera_name").get_parameter_value().string_value
-        self.calibration_file_ = self.get_parameter("calibration_file").get_parameter_value().string_value
-        self.start_ = self.get_parameter("start").get_parameter_value().integer_value
-        self.start_ = self.get_parameter("loop").get_parameter_value().bool_value
-        self.path_ = self.get_parameter("path").get_parameter_value().string_value
-        self.type_ = self.get_parameter("type").get_parameter_value().string_value
+        self.calibration_file = kwargs["calibration_file"]
 
         self.image_publisher_ = self.create_publisher(Image, image_topic_, 5)
         self.compressed_image_publisher_ = self.create_publisher(CompressedImage, compressed_image_topic_, 5)
         self.camera_info_publisher_ = self.create_publisher(CameraInfo, camera_info_topic_, 5)
 
-        self.frame_counter_ = 0
-
         self.br = CvBridge()
 
+        self.type = kwargs["type"]
+
+        self.loop = kwargs["loop"]
+
         try:
-            f = open(self.calibration_file_)
-            calib = yaml.load(f, Loader=yaml.Loader)
+            f = open(self.calibration_file)
+            calib = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:
             calib = None
             self.get_logger().warning(
-                "Could not find calibration file " + self.calibration_file_ + ", will proceed without a calibration file"
+                "Could not find calibration file " + self.calibration_file + ", will proceed without a calibration file"
             )
 
         if calib is not None:
@@ -86,39 +73,42 @@ class CameraSimulator(Node):
                     + "] does not match name "
                     + calib["camera_name"]
                     + " in file "
-                    + self.calibration_file_
+                    + self.calibration_file
                 )
 
         self.calib = calib
 
-        if self.type_ == "video":
-            if not os.path.isfile(self.path_):
-                raise RuntimeError(f"Invalid video path: {self.path_}")
+        path = kwargs['path']
+
+        if self.type == "video":
+            if not os.path.isfile(path):
+                raise RuntimeError(f"Invalid video path: {path}")
+
             try:
-                self.vc = cv2.VideoCapture(self.path_)
-                self.vc.set(cv2.CAP_PROP_POS_MSEC,  self.start_)
+                self.vc = cv2.VideoCapture(kwargs["path"])
+                self.vc.set(cv2.CAP_PROP_POS_MSEC, kwargs["start"])
             except:
                 print("End of file")
 
             video_fps = self.vc.get(cv2.CAP_PROP_FPS)
-            self.get_logger().warn(f"Publishing image with {video_fps} fps")
+            self.get_logger().info(f"Publishing image with {video_fps} fps")
 
             self.timer = self.create_timer(1.0 / video_fps, self.image_callback)
         else:
-            for image_path in natsorted(os.listdir(self.path_), key=lambda y: y.lower()):
+            for image_path in natsorted(os.listdir(path), key=lambda y: y.lower()):
                 if image_path.endswith(".jpg") or image_path.endswith(".jpeg") or image_path.endswith(".png"):
-                    self.image_callback(os.path.join(self.path_, image_path))
+                    self.image_callback(os.path.join(kwargs["path"], image_path))
             self.get_logger().info("All images have been published")
 
     def image_callback(self, image_path=None):
-        if self.type_ == "video":
+        if self.type == "video":
             rval, image = self.vc.read()
-            if not rval and not self.loop_:
+            if not rval and not self.loop:
                 self.get_logger().info("End of video, closing node...")
                 self.timer.cancel()
                 self.destroy_node()
                 exit()
-            elif not rval and self.loop_:
+            elif not rval and self.loop:
                 self.vc.set(cv2.CAP_PROP_POS_MSEC, 0)
                 rval, image = self.vc.read()            
         elif image_path:
@@ -133,9 +123,9 @@ class CameraSimulator(Node):
 
         if self.calib:
             camera_info_msg = self.get_camera_info(time_msg)
+            self.camera_info_publisher_.publish(camera_info_msg)
 
         self.image_publisher_.publish(img_msg)
-        self.camera_info_publisher_.publish(camera_info_msg)
         self.compressed_image_publisher_.publish(compressed_msg)
 
     def get_camera_info(self, time):
@@ -193,14 +183,24 @@ class CameraSimulator(Node):
 
 
 def main(args=None):
+    parser = argparse.ArgumentParser(description="Video file or files to load")
+    parser.add_argument("--path", type=str, default="", required=True, help="path to video folder")
+    parser.add_argument("--calibration_file", type=str, default="", help="path to video folder")
+    parser.add_argument("--type", type=str, default="video", help='type of "image" or "video')
+    parser.add_argument("--start", type=int, default=0, help="starting position")
+    parser.add_argument('--loop', action='store_true', help='loop video after end')
+    parser.set_defaults(loop=False)
+
+    extra_args = parser.parse_args()
+
     rclpy.init(args=args)
 
-    camera_simulator = CameraSimulator()
+    camera_simulator = CameraSimulator(
+        path=extra_args.path, type=extra_args.type, calibration_file=extra_args.calibration_file, start=extra_args.start,
+        loop=extra_args.loop
+    )
 
-    try:
-        rclpy.spin(camera_simulator)
-    except KeyboardInterrupt:
-        camera_simulator.get_logger().info("KeyboardInterrupt")
+    rclpy.spin(camera_simulator)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically

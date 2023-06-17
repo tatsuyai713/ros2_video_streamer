@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_prefix
-import launch
-import launch_ros.actions
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
 config = os.path.join(
     get_package_prefix('camera_simulator'),
@@ -13,19 +13,16 @@ config = os.path.join(
     'config.yaml'
 )
 
-
 def generate_launch_description():
-    ld = launch.LaunchDescription([
-        launch_ros.actions.Node(
+    return LaunchDescription([
+        # 起動したいノードを記述
+        Node(
             package="camera_simulator",
-            node_executable="camera_simulator",
+            executable="camera_simulator",
             output="screen",
             prefix=['stdbuf -o L'],
             parameters=[config]
         )
     ])
-    return ld
 
-
-if __name__ == "__main__":
-    generate_launch_description()
+    
